@@ -1,22 +1,54 @@
 classdef ADNode < handle
+%% Node in the function evalution graph
+    
     properties
-        value
-        grad
-        tape
-        func
+        value % function value at this node
+        grad % gradient accumulator
+        func % callback function to update gradient of the parent nodes
+        root % input node that holds the tape
+        tape % sequence of evaluation steps
     end
 
     methods
-        function n = ADNode(tape, x, func)
-            if nargin > 2; 
-                n.func = func; 
-                tape.add(n);
+        function y = ADNode(x, root, func)
+        %% create new node
+            if nargin > 1; 
+                y.func = func; 
+                y.root = root;
+                root.tape{end+1} = y;
+            else
+                y.root = y;
+                y.tape = {};
             end
-            n.tape = tape;
-            n.value = x;
+            y.value = x;
         end
 
+        function backprop(x, dy)
+        %% backpropagate the gradient by evaluating the tape backwards
+            if nargin > 1
+                x.grad = dy;
+            else
+                x.grad = 1;
+            end
+            for k = length(x.root.tape):-1:1
+                x.root.tape{k}.func(x.root.tape{k});
+                x.root.tape(k) = [];
+            end
+        end
+        
+        function y = tanh(x)
+            y = ADNode(tanh(x.value), x.root, @(y) x.add(y.grad .* sech(x.value) .^ 2));
+        end
+        
+        function y = sum(x)
+            y = ADNode(sum(x.value), x.root, @(y) x.add(y.grad));
+        end
+        
+    end
+    
+    methods (Access = private)
         function add(x, grad)
+        %% accumulate the gradient, take sum of dimensions if needed
             if isempty(x.grad)
                 x.grad = zeros(size(x.value));
             end
@@ -30,19 +62,6 @@ classdef ADNode < handle
                 x.grad = x.grad + grad;
             end
         end
-        
-        function backprop(n)
-            n.func(n);
-        end
-        
-        function y = tanh(x)
-            y = ADNode(x.tape, tanh(x.value), @(y) x.add(y.grad .* sech(x.value) .^ 2));
-        end
-        
-        function y = sum(x)
-            y = ADNode(x.tape, sum(x.value), @(y) x.add(y.grad));
-        end
-        
     end
 
 end
