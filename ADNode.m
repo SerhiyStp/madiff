@@ -44,6 +44,10 @@ classdef ADNode < handle
             y = ADNode(sum(x.value), x.root, @(y) x.add(y.grad));
         end
         
+        function y = abs(x)
+            y = ADNode(abs(x.value), x.root, @(y) x.add(y.grad .* sign(x.value)));
+        end
+        
     end
     
     methods (Access = private)
