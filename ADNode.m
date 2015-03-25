@@ -48,6 +48,75 @@ classdef ADNode < handle
             y = ADNode(abs(x.value), x.root, @(y) x.add(y.grad .* sign(x.value)));
         end
         
+        function y = acos(x)
+            y = ADNode(acos(x.value), x.root, @(y) x.add(-y.grad ./ sqrt(1-x.value.^2)));
+        end
+
+        function y = asin(x)
+            y = ADNode(asin(x.value), x.root, @(y) x.add(y.grad ./ sqrt(1-x.value.^2)));
+        end
+
+        function y = atan(x)
+            y = ADNode(atan(x.value), x.root, @(y) x.add(y.grad ./ (1+x.value.^2)));
+        end
+
+        function y = cos(x)
+            y = ADNode(cos(x.value), x.root, @(y) x.add(-y.grad .* sin(x.value)));
+        end
+        
+        function y = exp(x)
+            y = ADNode(exp(x.value), x.root, @(y) x.add(y.grad .* exp(x.value)));
+        end
+        
+        function y = log(x)
+            y = ADNode(log(x.value), x.root, @(y) x.add(y.grad ./ x.value));
+        end
+        
+        function y = sin(x)
+            y = ADNode(sin(x.value), x.root, @(y) x.add(y.grad .* cos(x.value)));
+        end
+
+        function y = sqrt(x)
+            y = ADNode(sqrt(x.value), x.root, @(y) x.add(y.grad ./ sqrt(x.value) / 2));
+        end
+        
+        function y = tan(x)
+            y = ADNode(tan(x.value), x.root, @(y) x.add(y.grad .* sec(x.value) .^ 2));
+        end
+
+        function y = uminus(x)
+            y = ADNode(-x.value, x.root, @(y) x.add(-y.grad));
+        end
+
+        function y = uplus(x)
+            y = x;
+        end
+        
+% end
+% eq
+% ge
+% gt
+% le
+% length
+% lt
+% max
+% min
+% minus
+% mpower
+% mtimes
+% ne
+% norm
+% plus
+% power
+% rdivide
+% size
+% sort
+% subsasgn
+% subsref
+% times
+% vertcat
+% horzcat
+        
     end
     
     methods (Access = private)
