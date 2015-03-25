@@ -4,7 +4,7 @@ For a matlab function like:
 
     f = @(x) sum(tanh(x));
 
-Create a function that will calculate a gradient as well:
+Create a new function that will calculate its gradient as well:
 
     f_grad = @(x) adiff(f, x);
 
