@@ -92,6 +92,27 @@ classdef ADNode < handle
             y = x;
         end
         
+        function [varargout] = subsref(x, s)
+            switch s(1).type
+              case '()'
+                varargout{1} = ADNode(x.value(s.subs{:}), x.root, @(y) x.subs_add(s.subs, y.grad));
+              otherwise
+                [varargout{1:nargout}] = builtin('subsref', x, s);
+            end
+        end
+        
+        function y = plus(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value + x2.value, x1.root, @(y) y.plus_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value + x2, x1.root, @(y) x1.add(y.grad));
+                end
+            else
+                y = ADNode(x1 + x2.value, x2.root, @(y) x2.add(y.grad));
+            end
+        end
+    
 % end
 % eq
 % ge
@@ -134,6 +155,28 @@ classdef ADNode < handle
             else
                 x.grad = x.grad + grad;
             end
+        end
+        
+        function subs_add(x, subs, grad)
+        %% accumulate the gradient with subscripts
+            if isempty(x.grad)
+                x.grad = zeros(size(x.value));
+            end
+            old = x.grad(subs{:});
+            if size(old, 1) == 1 && size(old, 2) == 1
+                x.grad(subs{:}) = old + sum(sum(grad));
+            elseif size(old, 1) == 1
+                x.grad(subs{:}) = old + sum(grad, 1);
+            elseif size(old, 2) == 1
+                x.grad(subs{:}) = old + sum(grad, 2);
+            else
+                x.grad(subs{:}) = old + grad;
+            end
+        end
+        
+        function plus_backprop(y, x1, x2)
+            x1.add(y.grad);
+            x2.add(y.grad);
         end
     end
 
