@@ -1,5 +1,4 @@
-# adiff
-Automatic Differentiation for Matlab (OO, reverse mode)
+# MADiff: Matlab Automatic Differentiation (reverse mode, OO)
 
 For a matlab function like: 
 
