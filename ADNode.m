@@ -339,7 +339,11 @@ classdef ADNode < handle
             if isempty(x.grad)
                 x.grad = zeros(size(x.value));
             end
-            x.grad(subs{:}) = x.grad(subs{:}) + y.grad(subs{:});
+            if size(x.grad) == [1, 1]
+                x.grad = x.grad + sum(y.grad(subs{:}));
+            else
+                x.grad(subs{:}) = x.grad(subs{:}) + y.grad(subs{:});
+            end
         end
 
         function subs_move(x, subs, y)
