@@ -112,7 +112,7 @@ classdef ADNode < handle
             switch s(1).type
               case '()'
                 x.value(s.subs{:}) = varargin{1}.value;
-                t = ADNode(x.value(s.subs{:}), x.root, @(y) varargin{1}.subs_assign(s.subs, x));
+                t = ADNode(x.value(s.subs{:}), x.root, @(y) varargin{1}.subs_move(s.subs, x));
                 y = x;
               otherwise
                 y = builtin('subsagn', x, s, varargin);
@@ -296,9 +296,10 @@ classdef ADNode < handle
             end
         end
 
-        function subs_assign(x, subs, y)
+        function subs_move(x, subs, y)
         %% accumulate the gradient with subscripts
             grad = y.grad(subs{:});
+            y.grad(subs{:}) = 0;
             if isempty(x.grad)
                 x.grad = zeros(size(x.value));
             end
