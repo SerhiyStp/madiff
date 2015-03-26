@@ -28,4 +28,4 @@ for j = 1:length(X)
 end
 
 %disp([dy dh])                                         % print the two vectors
-d = norm(dh-dy)/norm(dh+dy);     % return norm of diff divided by norm of sum
+d = norm(dh-dy)/(norm(dh+dy)+eps);     % return norm of diff divided by norm of sum
