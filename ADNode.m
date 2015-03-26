@@ -198,6 +198,10 @@ classdef ADNode < handle
                 y = ADNode(t, x2.root, @(y) x2.add(y.grad .* t .* log(x1)));
             end
         end
+        
+        function y = length(adn)
+            y = length(adn.value);
+        end
 
 % end
 % eq
