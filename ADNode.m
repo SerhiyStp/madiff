@@ -102,9 +102,20 @@ classdef ADNode < handle
         function [varargout] = subsref(x, s)
             switch s(1).type
               case '()'
-                varargout{1} = ADNode(x.value(s.subs{:}), x.root, @(y) x.subs_add(s.subs, y.grad));
+                varargout{1} = ADNode(x.value(s.subs{:}), x.root, @(y) x.subs_add(s.subs, y));
               otherwise
                 [varargout{1:nargout}] = builtin('subsref', x, s);
+            end
+        end
+        
+        function y = subsasgn(x, s, varargin)
+            switch s(1).type
+              case '()'
+                x.value(s.subs{:}) = varargin{1}.value;
+                t = ADNode(x.value(s.subs{:}), x.root, @(y) varargin{1}.subs_assign(s.subs, x));
+                y = x;
+              otherwise
+                y = builtin('subsagn', x, s, varargin);
             end
         end
         
@@ -137,10 +148,10 @@ classdef ADNode < handle
                 if isa(x2, 'ADNode')
                     y = ADNode(x1.value * x2.value, x1.root, @(y) y.mtimes_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value * x2, x1.root, @(y) x1.add(y.grad * x2));
+                    y = ADNode(x1.value * x2, x1.root, @(y) x1.add(bsxfun(@times, y.grad, x2)));
                 end
             else
-                y = ADNode(x1 * x2.value, x2.root, @(y) x2.add(y.grad * x1));
+                y = ADNode(x1 * x2.value, x2.root, @(y) x2.add(bsxfun(@times, y.grad, x1)));
             end
         end
 
@@ -245,7 +256,6 @@ classdef ADNode < handle
 % ne
 % norm
 % sort
-% subsasgn
 % vertcat
 % horzcat
         
@@ -268,8 +278,9 @@ classdef ADNode < handle
             end
         end
         
-        function subs_add(x, subs, grad)
+        function subs_add(x, subs, y)
         %% accumulate the gradient with subscripts
+            grad = y.grad;
             if isempty(x.grad)
                 x.grad = zeros(size(x.value));
             end
@@ -282,6 +293,24 @@ classdef ADNode < handle
                 x.grad(subs{:}) = old + sum(grad, 2);
             else
                 x.grad(subs{:}) = old + grad;
+            end
+        end
+
+        function subs_assign(x, subs, y)
+        %% accumulate the gradient with subscripts
+            grad = y.grad(subs{:});
+            if isempty(x.grad)
+                x.grad = zeros(size(x.value));
+            end
+            old = x.grad;
+            if size(old, 1) == 1 && size(old, 2) == 1
+                x.grad = old + sum(sum(grad));
+            elseif size(old, 1) == 1
+                x.grad = old + sum(grad, 1);
+            elseif size(old, 2) == 1
+                x.grad = old + sum(grad, 2);
+            else
+                x.grad = old + grad;
             end
         end
         
