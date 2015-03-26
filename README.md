@@ -25,3 +25,10 @@ Compare to the numerical approximation:
     % should be less than 1e-8
     checkgrad(f_grad, randn(1e3,1), 1e-6)
     7.2e-09
+
+Can be plugged into minimum search directly:
+
+    tic;  minimize(f_grad, randn(1e2,1), 6e2); toc
+    Linesearch    600;  Value 0.000314
+    Elapsed time is 10.891118 seconds.
+
