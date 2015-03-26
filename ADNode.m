@@ -40,8 +40,15 @@ classdef ADNode < handle
             y = ADNode(tanh(x.value), x.root, @(y) x.add(y.grad .* sech(x.value) .^ 2));
         end
         
-        function y = sum(x)
-            y = ADNode(sum(x.value), x.root, @(y) x.add(y.grad));
+        function y = sum(x, dim, flag)
+            switch nargin
+              case 3
+                y = ADNode(sum(x.value, dim, flag), x.root, @(y) x.add(y.grad));
+              case 2
+                y = ADNode(sum(x.value, dim), x.root, @(y) x.add(y.grad));
+              otherwise
+                y = ADNode(sum(x.value), x.root, @(y) x.add(y.grad));
+            end
         end
         
         function y = abs(x)
@@ -104,24 +111,24 @@ classdef ADNode < handle
         function y = plus(x1, x2)
             if isa(x1, 'ADNode')
                 if isa(x2, 'ADNode')
-                    y = ADNode(x1.value + x2.value, x1.root, @(y) y.plus_backprop(x1, x2));
+                    y = ADNode(bsxfun(@plus, x1.value, x2.value), x1.root, @(y) y.plus_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value + x2, x1.root, @(y) x1.add(y.grad));
+                    y = ADNode(bsxfun(@plus, x1.value, x2), x1.root, @(y) x1.add(y.grad));
                 end
             else
-                y = ADNode(x1 + x2.value, x2.root, @(y) x2.add(y.grad));
+                y = ADNode(bsxfun(@plus, x1, x2.value), x2.root, @(y) x2.add(y.grad));
             end
         end
 
         function y = minus(x1, x2)
             if isa(x1, 'ADNode')
                 if isa(x2, 'ADNode')
-                    y = ADNode(x1.value - x2.value, x1.root, @(y) y.minus_backprop(x1, x2));
+                    y = ADNode(bsxfun(@minus, x1.value, x2.value), x1.root, @(y) y.minus_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value - x2, x1.root, @(y) x1.add(y.grad));
+                    y = ADNode(bsxfun(@minus, x1.value, x2), x1.root, @(y) x1.add(y.grad));
                 end
             else
-                y = ADNode(x1 - x2.value, x2.root, @(y) x2.add(-y.grad));
+                y = ADNode(bsxfun(@minus, x1, x2.value), x2.root, @(y) x2.add(-y.grad));
             end
         end
         
@@ -140,24 +147,25 @@ classdef ADNode < handle
         function y = times(x1, x2)
             if isa(x1, 'ADNode')
                 if isa(x2, 'ADNode')
-                    y = ADNode(x1.value .* x2.value, x1.root, @(y) y.times_backprop(x1, x2));
+                    y = ADNode(bsxfun(@times, x1.value, x2.value), x1.root, @(y) y.times_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value .* x2, x1.root, @(y) x1.add(y.grad .* x2));
+                    y = ADNode(bsxfun(@times, x1.value, x2), x1.root, @(y) x1.add(bsxfun(@times, y.grad,x2)));
                 end
             else
-                y = ADNode(x1 .* x2.value, x2.root, @(y) x2.add(y.grad .* x1));
+                y = ADNode(bsxfun(@times, x1, x2.value), x2.root, @(y) x2.add(bsxfun(@times, y.grad, x1)));
             end
         end
         
         function y = rdivide(x1, x2)
             if isa(x1, 'ADNode')
                 if isa(x2, 'ADNode')
-                    y = ADNode(x1.value ./ x2.value, x1.root, @(y) y.rdivide_backprop(x1, x2));
+                    y = ADNode(bsxfun(@rdivide, x1.value, x2.value), x1.root, @(y) y.rdivide_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value ./ x2, x1.root, @(y) x1.add(y.grad ./ x2));
+                    y = ADNode(bsxfun(@rdivide, x1.value, x2), x1.root, @(y) x1.add(bsxfun(@rdivide, y.grad, x2)));
                 end
             else
-                y = ADNode(x1 ./ x2.value, x2.root, @(y) x2.add(- y.grad .* x1 ./ x2.value .^ 2));
+                y = ADNode(bsxfun(@rdivide, x1, x2.value), x2.root, ...
+                           @(y) x2.add(- y.grad .* bsxfun(@rdivide, x1, x2.value .^ 2)));
             end
         end
 
@@ -202,19 +210,40 @@ classdef ADNode < handle
         function y = length(adn)
             y = length(adn.value);
         end
-
+        
+        function y = size(adn, dim)
+            if nargin < 2;
+                y = size(adn.value);
+            else
+                y = size(adn.value, dim);
+            end
+        end
+        
+        function y = bsxfun(op, x1, x2)
+            switch func2str(op)
+              case 'minus'
+                y = minus(x1, x2);
+              case 'plus'
+                y = plus(x1, x2);
+              case 'times'
+                y = times(x1, x2);
+              case 'rdivide'
+                y = rdivide(x1, x2);
+              otherwise
+                assert(false, 'not implemented');
+            end
+        end
+        
 % end
 % eq
 % ge
 % gt
 % le
-% length
 % lt
 % max
 % min
 % ne
 % norm
-% size
 % sort
 % subsasgn
 % vertcat
@@ -272,13 +301,13 @@ classdef ADNode < handle
         end
     
         function times_backprop(y, x1, x2)
-            x1.add(y.grad .* x2.value);
-            x2.add(y.grad .* x1.value);
+            x1.add(bsxfun(@times, y.grad, x2.value));
+            x2.add(bsxfun(@times, y.grad, x1.value));
         end
         
         function rdivide_backprop(y, x1, x2)
-            x1.add(y.grad ./ x2.value);
-            x2.add(-y.grad .* x1.value ./ x2.value .^ 2);
+            x1.add(bsxfun(@rdivide, y.grad, x2.value));
+            x2.add(-y.grad .* bsxfun(@rdivide, x1.value, x2.value .^ 2));
         end
     
         function mrdivide_backprop(y, x1, x2)
