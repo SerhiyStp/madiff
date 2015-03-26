@@ -89,7 +89,7 @@ classdef ADNode < handle
         end
 
         function y = uplus(x)
-            y = x;
+            y = ADNode(x.value, x.root, @(y) x.add(y.grad));
         end
         
         function [varargout] = subsref(x, s)
@@ -112,7 +112,67 @@ classdef ADNode < handle
                 y = ADNode(x1 + x2.value, x2.root, @(y) x2.add(y.grad));
             end
         end
-    
+
+        function y = minus(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value - x2.value, x1.root, @(y) y.minus_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value - x2, x1.root, @(y) x1.add(y.grad));
+                end
+            else
+                y = ADNode(x1 - x2.value, x2.root, @(y) x2.add(-y.grad));
+            end
+        end
+        
+        function y = mtimes(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value * x2.value, x1.root, @(y) y.mtimes_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value * x2, x1.root, @(y) x1.add(y.grad * x2));
+                end
+            else
+                y = ADNode(x1 * x2.value, x2.root, @(y) x2.add(y.grad * x1));
+            end
+        end
+
+        function y = times(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value .* x2.value, x1.root, @(y) y.times_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value .* x2, x1.root, @(y) x1.add(y.grad .* x2));
+                end
+            else
+                y = ADNode(x1 .* x2.value, x2.root, @(y) x2.add(y.grad .* x1));
+            end
+        end
+        
+        function y = rdivide(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value ./ x2.value, x1.root, @(y) y.rdivide_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value ./ x2, x1.root, @(y) x1.add(y.grad ./ x2));
+                end
+            else
+                y = ADNode(x1 ./ x2.value, x2.root, @(y) x2.add(- y.grad .* x1 ./ x2.value .^ 2));
+            end
+        end
+
+        function y = mrdivide(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value / x2.value, x1.root, @(y) y.mrdivide_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value / x2, x1.root, @(y) x1.add(y.grad / x2));
+                end
+            else
+                y = ADNode(x1 / x2.value, x2.root, @(y) x2.add(- y.grad .* x1 / x2.value .^ 2));
+            end
+        end
+        
 % end
 % eq
 % ge
@@ -122,19 +182,13 @@ classdef ADNode < handle
 % lt
 % max
 % min
-% minus
 % mpower
-% mtimes
 % ne
 % norm
-% plus
 % power
-% rdivide
 % size
 % sort
 % subsasgn
-% subsref
-% times
 % vertcat
 % horzcat
         
@@ -178,6 +232,32 @@ classdef ADNode < handle
             x1.add(y.grad);
             x2.add(y.grad);
         end
+        
+        function minus_backprop(y, x1, x2)
+            x1.add(y.grad);
+            x2.add(-y.grad);
+        end
+    
+        function mtimes_backprop(y, x1, x2)
+            x1.add(y.grad * x2.value);
+            x2.add(y.grad * x1.value);
+        end
+    
+        function times_backprop(y, x1, x2)
+            x1.add(y.grad .* x2.value);
+            x2.add(y.grad .* x1.value);
+        end
+        
+        function rdivide_backprop(y, x1, x2)
+            x1.add(y.grad ./ x2.value);
+            x2.add(-y.grad .* x1.value ./ x2.value .^ 2);
+        end
+    
+        function mrdivide_backprop(y, x1, x2)
+            x1.add(y.grad / x2.value);
+            x2.add(-y.grad .* x1.value / x2.value .^ 2);
+        end
+        
     end
 
 end
