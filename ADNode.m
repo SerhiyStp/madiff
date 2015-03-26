@@ -245,14 +245,52 @@ classdef ADNode < handle
             end
         end
         
+        function y = min(x1, x2)
+            if nargin < 2
+                [m, k] = min(x1.value);
+                y = ADNode(m, x1.root, @(y) x1.subs_add({k}, y));
+            else
+                if isa(x1, 'ADNode')
+                    if isa(x2, 'ADNode')
+                        m = min(x1.value, x2.value);
+                        y = ADNode(m, x1.root, @(y) y.minmax_backprop(x1, x2));
+                    else
+                        m = min(x1.value, x2);
+                        y = ADNode(m, x1.root, @(y) x1.subs_match({find(m == x1.value)}, y));
+                    end
+                else
+                    m = min(x1, x2.value);
+                    y = ADNode(m, x2.root, @(y) x2.subs_match({find(m == x2.value)}, y));
+                end
+            end
+        end
+        
+        function y = max(x1, x2)
+            if nargin < 2
+                [m, k] = max(x1.value);
+                y = ADNode(m, x1.root, @(y) x1.subs_add({k}, y));
+            else
+                if isa(x1, 'ADNode')
+                    if isa(x2, 'ADNode')
+                        m = max(x1.value, x2.value);
+                        y = ADNode(m, x1.root, @(y) y.minmax_backprop(x1, x2));
+                    else
+                        m = max(x1.value, x2);
+                        y = ADNode(m, x1.root, @(y) x1.subs_match({find(m == x1.value)}, y));
+                    end
+                else
+                    m = max(x1, x2.value);
+                    y = ADNode(m, x2.root, @(y) x2.subs_match({find(m == x2.value)}, y));
+                end
+            end
+        end
+        
 % end
 % eq
 % ge
 % gt
 % le
 % lt
-% max
-% min
 % ne
 % norm
 % sort
@@ -294,6 +332,14 @@ classdef ADNode < handle
             else
                 x.grad(subs{:}) = old + grad;
             end
+        end
+
+        function subs_match(x, subs, y)
+        %% accumulate the gradient with subscripts
+            if isempty(x.grad)
+                x.grad = zeros(size(x.value));
+            end
+            x.grad(subs{:}) = x.grad(subs{:}) + y.grad(subs{:});
         end
 
         function subs_move(x, subs, y)
@@ -353,6 +399,11 @@ classdef ADNode < handle
         function power_backprop(y, x1, x2)
             x1.add(y.grad .* x1.value .^ (x2.value-1) .* x2.value);
             x2.add(y.grad .* y.value .* log(x1.value));
+        end
+        
+        function minmax_backprop(y, x1, x2)
+            x1.subs_match({find(y.value == x1.value)}, y);
+            x2.subs_match({find(y.value == x2.value)}, y);
         end
     
     end
