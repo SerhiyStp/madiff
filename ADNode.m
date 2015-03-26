@@ -173,6 +173,32 @@ classdef ADNode < handle
             end
         end
         
+        function y = mpower(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value ^ x2.value, x1.root, @(y) y.mpower_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value ^ x2, x1.root, @(y) x1.add(y.grad * x1.value ^ (x2-1) * x2));
+                end
+            else
+                t = x1 ^ x2.value;
+                y = ADNode(t, x2.root, @(y) x2.add(y.grad * t * log(x1)));
+            end
+        end
+
+        function y = power(x1, x2)
+            if isa(x1, 'ADNode')
+                if isa(x2, 'ADNode')
+                    y = ADNode(x1.value .^ x2.value, x1.root, @(y) y.power_backprop(x1, x2));
+                else
+                    y = ADNode(x1.value .^ x2, x1.root, @(y) x1.add(y.grad .* x1.value .^ (x2-1) .* x2));
+                end
+            else
+                t = x1 .^ x2.value;
+                y = ADNode(t, x2.root, @(y) x2.add(y.grad .* t .* log(x1)));
+            end
+        end
+
 % end
 % eq
 % ge
@@ -182,10 +208,8 @@ classdef ADNode < handle
 % lt
 % max
 % min
-% mpower
 % ne
 % norm
-% power
 % size
 % sort
 % subsasgn
@@ -258,6 +282,16 @@ classdef ADNode < handle
             x2.add(-y.grad .* x1.value / x2.value .^ 2);
         end
         
+        function mpower_backprop(y, x1, x2)
+            x1.add(y.grad * x1.value ^ (x2.value-1) * x2.value);
+            x2.add(y.grad * y.value * log(x1.value));
+        end
+    
+        function power_backprop(y, x1, x2)
+            x1.add(y.grad .* x1.value .^ (x2.value-1) .* x2.value);
+            x2.add(y.grad .* y.value .* log(x1.value));
+        end
+    
     end
 
 end
