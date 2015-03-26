@@ -287,7 +287,7 @@ classdef ADNode < handle
         
         function y = norm(x, d)
             if (nargin==1) d = 2; end
-            y = sum(abs(x).^d).^(1/d);
+            y = sum(abs(x) .^ d) .^ (1/d);
         end
         
 % end
@@ -307,16 +307,25 @@ classdef ADNode < handle
         function add(x, grad)
         %% accumulate the gradient, take sum of dimensions if needed
             if isempty(x.grad)
-                x.grad = zeros(size(x.value));
-            end
-            if size(x.grad, 1) == 1 && size(x.grad, 2) == 1
-                x.grad = x.grad + sum(sum(grad));
-            elseif size(x.grad, 1) == 1
-                x.grad = x.grad + sum(grad, 1);
-            elseif size(x.grad, 2) == 1
-                x.grad = x.grad + sum(grad, 2);
+                if size(x.value) == [1, 1]
+                    x.grad = sum(sum(grad));
+                elseif size(x.value, 1) == 1
+                    x.grad = sum(grad, 1);
+                elseif size(x.value, 2) == 1
+                    x.grad = sum(grad, 2);
+                else
+                    x.grad = grad;
+                end
             else
-                x.grad = x.grad + grad;
+                if size(x.grad) == [1, 1]
+                    x.grad = x.grad + sum(sum(grad));
+                elseif size(x.grad, 1) == 1
+                    x.grad = x.grad + sum(grad, 1);
+                elseif size(x.grad, 2) == 1
+                    x.grad = x.grad + sum(grad, 2);
+                else
+                    x.grad = x.grad + grad;
+                end
             end
         end
         
