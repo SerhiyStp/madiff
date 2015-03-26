@@ -285,6 +285,11 @@ classdef ADNode < handle
             end
         end
         
+        function y = norm(x, d)
+            if (nargin==1) d = 2; end
+            y = sum(abs(x).^d).^(1/d);
+        end
+        
 % end
 % eq
 % ge
@@ -292,7 +297,6 @@ classdef ADNode < handle
 % le
 % lt
 % ne
-% norm
 % sort
 % vertcat
 % horzcat
