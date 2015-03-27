@@ -37,7 +37,7 @@ classdef ADNode < handle
         end
         
         function y = tanh(x)
-            y = ADNode(tanh(x.value), x.root, @(y) x.add(y.grad .* sech(x.value) .^ 2));
+            y = ADNode(tanh(x.value), x.root, @(y) x.add(bsxfun(@times, y.grad, sech(x.value) .^ 2)));
         end
         
         function y = sum(x, dim, flag)
@@ -56,39 +56,39 @@ classdef ADNode < handle
         end
         
         function y = acos(x)
-            y = ADNode(acos(x.value), x.root, @(y) x.add(-y.grad ./ sqrt(1-x.value.^2)));
+            y = ADNode(acos(x.value), x.root, @(y) x.add(bsxfun(@rdivide, -y.grad, sqrt(1-x.value.^2))));
         end
 
         function y = asin(x)
-            y = ADNode(asin(x.value), x.root, @(y) x.add(y.grad ./ sqrt(1-x.value.^2)));
+            y = ADNode(asin(x.value), x.root, @(y) x.add(bsxfun(@rdivide, y.grad, sqrt(1-x.value.^2))));
         end
 
         function y = atan(x)
-            y = ADNode(atan(x.value), x.root, @(y) x.add(y.grad ./ (1+x.value.^2)));
+            y = ADNode(atan(x.value), x.root, @(y) x.add(bsxfun(@rdivide, y.grad, (1+x.value.^2))));
         end
 
         function y = cos(x)
-            y = ADNode(cos(x.value), x.root, @(y) x.add(-y.grad .* sin(x.value)));
+            y = ADNode(cos(x.value), x.root, @(y) x.add(bsxfun(@times, -y.grad, sin(x.value))));
         end
         
         function y = exp(x)
-            y = ADNode(exp(x.value), x.root, @(y) x.add(y.grad .* exp(x.value)));
+            y = ADNode(exp(x.value), x.root, @(y) x.add(bsxfun(@times, y.grad, exp(x.value))));
         end
         
         function y = log(x)
-            y = ADNode(log(x.value), x.root, @(y) x.add(y.grad ./ x.value));
+            y = ADNode(log(x.value), x.root, @(y) x.add(bsxfun(@rdivide, y.grad, x.value)));
         end
         
         function y = sin(x)
-            y = ADNode(sin(x.value), x.root, @(y) x.add(y.grad .* cos(x.value)));
+            y = ADNode(sin(x.value), x.root, @(y) x.add(bsxfun(@times, y.grad, cos(x.value))));
         end
 
         function y = sqrt(x)
-            y = ADNode(sqrt(x.value), x.root, @(y) x.add(y.grad ./ sqrt(x.value) / 2));
+            y = ADNode(sqrt(x.value), x.root, @(y) x.add(bsxfun(@rdivide, y.grad, 2*sqrt(x.value))));
         end
         
         function y = tan(x)
-            y = ADNode(tan(x.value), x.root, @(y) x.add(y.grad .* sec(x.value) .^ 2));
+            y = ADNode(tan(x.value), x.root, @(y) x.add(bsxfun(@times, y.grad, sec(x.value) .^ 2)));
         end
 
         function y = uminus(x)
@@ -178,7 +178,8 @@ classdef ADNode < handle
                 if isa(x2, 'ADNode')
                     y = ADNode(bsxfun(@rdivide, x1.value, x2.value), x1.root, @(y) y.rdivide_backprop(x1, x2));
                 else
-                    y = ADNode(bsxfun(@rdivide, x1.value, x2), x1.root, @(y) x1.add(bsxfun(@rdivide, y.grad, x2)));
+                    y = ADNode(bsxfun(@rdivide, x1.value, x2), x1.root, ...
+                               @(y) x1.add(bsxfun(@rdivide, y.grad, x2)));
                 end
             else
                 y = ADNode(bsxfun(@rdivide, x1, x2.value), x2.root, ...
@@ -216,11 +217,12 @@ classdef ADNode < handle
                 if isa(x2, 'ADNode')
                     y = ADNode(x1.value .^ x2.value, x1.root, @(y) y.power_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value .^ x2, x1.root, @(y) x1.add(y.grad .* x1.value .^ (x2-1) .* x2));
+                    y = ADNode(x1.value .^ x2, x1.root, ...
+                               @(y) x1.add(bsxfun(@times, y.grad, x1.value .^ (x2-1) .* x2)));
                 end
             else
                 t = x1 .^ x2.value;
-                y = ADNode(t, x2.root, @(y) x2.add(y.grad .* t .* log(x1)));
+                y = ADNode(t, x2.root, @(y) x2.add(bsxfun(@times, y.grad, t .* log(x1))));
             end
         end
         
@@ -375,6 +377,7 @@ classdef ADNode < handle
         
         function subs_move(x, subs, y)
         %% accumulate the gradient with subscripts
+            if size(y.grad) == [1,1]; y.grad = repmat(y.grad, size(y.value)); end
             grad = y.grad(subs{:});
             y.grad(subs{:}) = 0;
             if isempty(x.grad)
