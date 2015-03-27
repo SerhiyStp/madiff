@@ -52,7 +52,7 @@ classdef ADNode < handle
         end
         
         function y = abs(x)
-            y = ADNode(abs(x.value), x.root, @(y) x.add(y.grad .* sign(x.value)));
+            y = ADNode(abs(x.value), x.root, @(y) x.add(bsxfun(@times, y.grad, sign(x.value))));
         end
         
         function y = acos(x)
@@ -111,9 +111,15 @@ classdef ADNode < handle
         function y = subsasgn(x, s, varargin)
             switch s(1).type
               case '()'
-                x.value(s.subs{:}) = varargin{1}.value;
-                t = ADNode(x.value(s.subs{:}), x.root, @(y) varargin{1}.subs_move(s.subs, x));
-                y = x;
+                if isa(varargin{1}, 'ADNode')
+                    x.value(s.subs{:}) = varargin{1}.value;
+                    t = ADNode(x.value(s.subs{:}), x.root, @(y) varargin{1}.subs_move(s.subs, x));
+                    y = x;
+                else
+                    x.value(s.subs{:}) = varargin{1};
+                    t = ADNode(x.value(s.subs{:}), x.root, @(y) x.subs_clear(s.subs));
+                    y = x;
+                end
               otherwise
                 y = builtin('subsagn', x, s, varargin);
             end
@@ -324,7 +330,7 @@ classdef ADNode < handle
                 elseif size(x.grad, 2) == 1
                     x.grad = x.grad + sum(grad, 2);
                 else
-                    x.grad = x.grad + grad;
+                    x.grad = bsxfun(@plus, x.grad, grad);
                 end
             end
         end
@@ -359,6 +365,14 @@ classdef ADNode < handle
             end
         end
 
+        function subs_clear(x, subs)
+        %% clear the gradient with subscripts
+            if isempty(x.grad)
+                x.grad = zeros(size(x.value));
+            end
+            x.grad(subs{:}) = 0;
+        end
+        
         function subs_move(x, subs, y)
         %% accumulate the gradient with subscripts
             grad = y.grad(subs{:});
@@ -389,8 +403,8 @@ classdef ADNode < handle
         end
     
         function mtimes_backprop(y, x1, x2)
-            x1.add(y.grad * x2.value);
-            x2.add(y.grad * x1.value);
+            x1.add(bsxfun(@times, y.grad, x2.value));
+            x2.add(bsxfun(@times, y.grad, x1.value));
         end
     
         function times_backprop(y, x1, x2)
