@@ -18,13 +18,15 @@ function d = checkgrad(f, X, e);
 
 [y dy] = f(X);                               % get the partial derivatives dy
 
-dh = zeros(length(X),1) ;
-for j = 1:length(X)
-  dx = zeros(size(X));
-  dx(j) = dx(j) + e;                             % perturb a single dimension
-  y2 = f(X+dx);
-  y1 = f(X-dx);
-  dh(j) = (y2 - y1)/(2*e);
+dh = zeros(size(X)) ;
+for k = 1:size(X, 2)
+    for j = 1:size(X, 1)
+        dx = zeros(size(X));
+        dx(j, k) = e;                             % perturb a single dimension
+        y2 = f(X+dx);
+        y1 = f(X-dx);
+        dh(j, k) = (y2 - y1)/(2*e);
+    end
 end
 
 %disp([dy dh])                                         % print the two vectors
