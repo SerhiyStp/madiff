@@ -204,7 +204,14 @@ classdef ADNode < handle
                 if isa(x2, 'ADNode')
                     y = ADNode(x1.value ^ x2.value, x1.root, @(y) y.mpower_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value ^ x2, x1.root, @(y) x1.add(y.grad * x1.value ^ (x2-1) * x2));
+                    switch x2
+                      case 1
+                        y = ADNode(x1.value ^ x2, x1.root, @(y) x1.add(y.grad));
+                      case 2
+                        y = ADNode(x1.value ^ x2, x1.root, @(y) x1.add(y.grad * x1.value * 2));
+                      otherwise
+                        y = ADNode(x1.value ^ x2, x1.root, @(y) x1.add(y.grad * x1.value ^ (x2-1) * x2));
+                    end
                 end
             else
                 t = x1 ^ x2.value;
@@ -217,8 +224,15 @@ classdef ADNode < handle
                 if isa(x2, 'ADNode')
                     y = ADNode(x1.value .^ x2.value, x1.root, @(y) y.power_backprop(x1, x2));
                 else
-                    y = ADNode(x1.value .^ x2, x1.root, ...
-                               @(y) x1.add(bsxfun(@times, y.grad, x1.value .^ (x2-1) .* x2)));
+                    switch x2
+                      case 1
+                        y = ADNode(x1.value .^ x2, x1.root, @(y) x1.add(y.grad));
+                      case 2
+                        y = ADNode(x1.value .^ x2, x1.root, @(y) x1.add(bsxfun(@times, y.grad, x1.value * 2)));
+                      otherwise
+                        y = ADNode(x1.value .^ x2, x1.root, ...
+                                   @(y) x1.add(bsxfun(@times, y.grad, x1.value .^ (x2-1) .* x2)));
+                    end
                 end
             else
                 t = x1 .^ x2.value;
