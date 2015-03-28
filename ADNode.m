@@ -23,7 +23,7 @@ classdef ADNode < handle
             y.value = x;
         end
 
-        function backprop(x, dy)
+        function dy = backprop(x, dy)
         %% backpropagate the gradient by evaluating the tape backwards
             if nargin > 1
                 x.grad = dy;
@@ -33,6 +33,16 @@ classdef ADNode < handle
             for k = length(x.root.tape):-1:1
                 x.root.tape{k}.func(x.root.tape{k});
                 x.root.tape(k) = [];
+            end
+            dy = x.root.grad;
+            if size(dy) ~= size(x.root.value)
+                if size(dy) == [1, 1]
+                    dy = repmat(dy, size(x.root.value));
+                elseif size(dy, 1) == 1 && size(x.root.value, 1) ~= 1
+                    dy = repmat(dy, size(x.root.value, 1), 1);
+                elseif size(dy, 2) == 1 && size(x.root.value, 2) ~= 1
+                    dy = repmat(dy, 1, size(x.root.value, 2));
+                end
             end
         end
         
