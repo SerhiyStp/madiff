@@ -8,16 +8,6 @@ function [y dy] = adiff(f, x, dy)
         end
         x = ADNode(x);
         y = f(x);
-        y.backprop(dy);
+        dy = y.backprop(dy);
         y = y.value;
-        dy = x.grad;
-        if size(dy) ~= size(x)
-            if size(dy) == [1, 1]
-                dy = repmat(dy, size(x));
-            elseif size(dy, 1) == 1 && size(x, 1) ~= 1
-                dy = repmat(dy, size(x, 1), 1);
-            elseif size(dy, 2) == 1 && size(x, 2) ~= 1
-                dy = repmat(dy, 1, size(x, 2));
-            end
-        end
     end
