@@ -322,7 +322,14 @@ classdef ADNode < handle
             y = sum(abs(x) .^ d) .^ (1/d);
         end
         
-% end
+        function y = end(adn, dim, n)
+            if n == 1
+                y = length(adn.value);
+            else
+                y = size(adn.value, dim);
+            end
+        end
+
 % eq
 % ge
 % gt
