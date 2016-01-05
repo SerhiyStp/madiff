@@ -3,7 +3,7 @@
 For a matlab function like: 
 
     % banana function
-    f = @(x) sum(100*(x(2:length(x))-x(1:length(x)-1).^2).^2 + (1-x(1:length(x)-1)).^2);
+    f = @(x) sum(100*(x(2:end)-x(1:end-1).^2).^2 + (1-x(1:end-1)).^2);
 
 Create a new function that calculates its gradient as well:
 
